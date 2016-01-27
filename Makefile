@@ -1,5 +1,5 @@
 CC = gcc
-FLAGS = -g -Wall --std=c11
+FLAGS = -g -Wall --std=gnu11
 LINKOPTS = -lcurl
 
 all: weatherbot

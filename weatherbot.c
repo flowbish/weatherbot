@@ -95,12 +95,8 @@ char *parse_command(Data day_data, char *the_command);
 
 int main(int argc, char *argv[]){
   LinkedListPtr weather = initLinkedList();
-  struct json_token *arr, *tok, *loc, *city, *state;
-  char *json, *results, location[100], command[256];
-  char *token;
-  char *end_str;
-  int done;
-  Data day_data;
+  char command[256];
+  int done = 0;
 
   printf("-- Welcome to WEATHERBOT, your personal weather assistant! --\n");
 
@@ -123,13 +119,11 @@ int main(int argc, char *argv[]){
   }
   empty(weather);
   destroy(weather);
-  free(arr);
   return 0;
 }
 
 LinkedListPtr get_weather(){
   CURL *curl;
-  CURLcode res;
   struct string s;
   char *json, zipcode[7];
   char *urlstart = "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20%28select%20woeid%20from%20geo.places%281%29%20where%20text%3D%22";
@@ -158,7 +152,7 @@ LinkedListPtr get_weather(){
     curl_easy_setopt(curl, CURLOPT_URL, newurl);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
-    res = curl_easy_perform(curl);
+    curl_easy_perform(curl);
 
     json = s.ptr;
 
@@ -193,7 +187,6 @@ void save_json(struct json_token *arr, LinkedListPtr list){ // Parse the big ugl
   holder = strdup(tok->ptr);
   token = strtok_r(holder, "[{}", &end_str);
   while (token != NULL){
-    char *end_token;
     // DON'T process the unneeded tokens
     if(strcasecmp(token,",") != 0 && strcasecmp(token,",\"guid\":") != 0 && strncmp(token, "\"isPermaLink\"", 13) != 0){
 
@@ -204,7 +197,7 @@ void save_json(struct json_token *arr, LinkedListPtr list){ // Parse the big ugl
 
       // add back in some formatting that got eaten
       size_t len = strlen(spare2);
-      spare = malloc(len + 2);
+      spare = malloc(len + 3);
       strcpy(spare, spare2);
       spare[len] = '\"';
       spare[len + 1] = '}';
@@ -307,14 +300,20 @@ Data make_data(struct json_token *tok){ // Takes the weather for one day and mak
 
   holder = find_json_token(tok, "date");
   data.date = strndup(holder->ptr, holder->len);
+
   holder = find_json_token(tok, "day");
   data.day = strndup(holder->ptr, holder->len);
+
   holder = find_json_token(tok, "high");
   strncpy(temp_holder, holder->ptr, holder->len);
+  temp_holder[holder->len] = '\0';
   data.high = atoi(temp_holder);
+
   holder = find_json_token(tok, "low");
   strncpy(temp_holder, holder->ptr, holder->len);
+  temp_holder[holder->len] = '\0';
   data.low = atoi(temp_holder);
+
   holder = find_json_token(tok, "text");
   data.description = strndup(holder->ptr, holder->len);
 
@@ -349,8 +348,7 @@ char *parse_day(char *original_date){
 }
 
 char *parse_command(Data day_data, char *the_command){
-  char *commands[] = {"weather", "temperature", "high", "low", "warm", "cold", "forecast", 0};
-  char *temperature = malloc(50), *high = malloc(10), *low = malloc(10);
+  char *temperature = malloc(50);
   if(strcasecmp(the_command, "weather") == 0 || strcasecmp(the_command, "forecast") == 0){
     return day_data.description;
   }
